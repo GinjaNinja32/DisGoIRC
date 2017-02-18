@@ -28,7 +28,7 @@ func Init(c Config) {
 }
 
 func incomingIRC(nick, channel, message string) {
-	log.Debugf("IRC %s <%s> %s", channel, nick, message)
+	log.Infof("IRC %s <%s> %s", channel, nick, message)
 
 	discordChan, ok := conf.Mapping[channel]
 	if !ok {
@@ -43,7 +43,7 @@ func incomingIRC(nick, channel, message string) {
 }
 
 func incomingDiscord(nick, channel, message string) {
-	log.Debugf("DIS %s <%s> %s", channel, nick, message)
+	log.Infof("DIS %s <%s> %s", channel, nick, message)
 
 	ircChan, ok := inverseMapping[channel]
 	if !ok {
