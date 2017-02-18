@@ -103,35 +103,40 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 		return
 	}
 
-	message := m.Content
+	if m.Content != "" {
+		message := m.Content
 
-	// Channels
-	for _, c := range g.Channels {
-		if c.Type != "text" {
-			continue
+		// Channels
+		for _, c := range g.Channels {
+			if c.Type != "text" {
+				continue
+			}
+			find := fmt.Sprintf("<#%s>", c.ID)
+			replace := fmt.Sprintf("#%s", c.Name)
+			message = strings.Replace(message, find, replace, -1)
 		}
-		find := fmt.Sprintf("<#%s>", c.ID)
-		replace := fmt.Sprintf("#%s", c.Name)
-		message = strings.Replace(message, find, replace, -1)
-	}
 
-	// Users
-	for _, u := range g.Members {
-		find := fmt.Sprintf("<@%s>", u.User.ID)
-		find2 := fmt.Sprintf("<@!%s>", u.User.ID)
-		replace := fmt.Sprintf("@%s", u.User.Username)
-		message = strings.Replace(message, find, replace, -1)
-		message = strings.Replace(message, find2, replace, -1)
-	}
+		// Users
+		for _, u := range g.Members {
+			find := fmt.Sprintf("<@%s>", u.User.ID)
+			find2 := fmt.Sprintf("<@!%s>", u.User.ID)
+			replace := fmt.Sprintf("@%s", u.User.Username)
+			message = strings.Replace(message, find, replace, -1)
+			message = strings.Replace(message, find2, replace, -1)
+		}
 
-	// Roles
-	for _, r := range g.Roles {
-		find := fmt.Sprintf("<@&%s>", r.ID)
-		replace := fmt.Sprintf("@%s", r.Name)
-		message = strings.Replace(message, find, replace, -1)
-	}
+		// Roles
+		for _, r := range g.Roles {
+			find := fmt.Sprintf("<@&%s>", r.ID)
+			replace := fmt.Sprintf("@%s", r.Name)
+			message = strings.Replace(message, find, replace, -1)
+		}
 
-	incomingDiscord(m.Author.Username, fmt.Sprintf("%s#%s", g.Name, c.Name), message)
+		incomingDiscord(m.Author.Username, fmt.Sprintf("%s#%s", g.Name, c.Name), message)
+	}
+	for _, a := range m.Attachments {
+		incomingDiscord(m.Author.Username, fmt.Sprintf("%s#%s", g.Name, c.Name), a.ProxyURL)
+	}
 }
 
 func dOutgoing(nick, channel, message string) {
