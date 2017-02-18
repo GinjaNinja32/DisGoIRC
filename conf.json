@@ -1,0 +1,19 @@
+{
+	"irc": {
+		"nick": "DisGoIRC",
+		"user": "DisGoIRC",
+		"pass": "my-irc-password",
+		"ssl": true,
+		"server": "irc.example.com:6697"
+	},
+	"discord": {
+		"token": "DISCORD-TOKEN-GOES-HERE"
+	},
+	"mapping": {
+		"#my-irc-channel":       "my-discord-server-name#general",
+		"#my-other-irc-channel": "my-discord-server-name#otherchannel",
+
+		"#other-discord": "second-discord-server#general"
+	}
+}
+
