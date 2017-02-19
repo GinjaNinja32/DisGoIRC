@@ -58,8 +58,12 @@ func iAction(e *irc.Event) {
 
 var outgoingNickRegex = regexp.MustCompile(`\b[a-zA-Z0-9]`)
 
-func iOutgoing(nick, channel, message string) {
+func iAddAntiPing(s string) string {
 	// add a \uFEFF character to avoid pinging the user
-	nick = outgoingNickRegex.ReplaceAllString(nick, "$0\ufeff")
+	return outgoingNickRegex.ReplaceAllString(s, "$0\ufeff")
+}
+
+func iOutgoing(nick, channel, message string) {
+	nick = iAddAntiPing(nick)
 	iSession.Privmsg(channel, fmt.Sprintf("<%s> %s", nick, message))
 }

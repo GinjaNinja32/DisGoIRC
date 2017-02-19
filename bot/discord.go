@@ -2,6 +2,9 @@ package bot
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -82,6 +85,8 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 		return
 	}
 
+	channel := fmt.Sprintf("%s#%s", g.Name, c.Name)
+
 	if m.Content != "" {
 		message := m.Content
 
@@ -111,11 +116,50 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 			message = strings.Replace(message, find, replace, -1)
 		}
 
-		incomingDiscord(m.Author.Username, fmt.Sprintf("%s#%s", g.Name, c.Name), message)
+		// Multiline
+		lines := strings.Split(message, "\n")
+		if len(lines) > 3 {
+			url := uploadToPtpb(message)
+
+			for _, line := range lines[:2] {
+				incomingDiscord(m.Author.Username, channel, line)
+			}
+			incomingDiscord("[SYSTEM]", channel, fmt.Sprintf("full message from %s: %s", iAddAntiPing(m.Author.Username), url))
+		} else {
+			for _, line := range lines {
+				incomingDiscord(m.Author.Username, channel, line)
+			}
+		}
+
+		//incomingDiscord(m.Author.Username, channel, message)
 	}
 	for _, a := range m.Attachments {
-		incomingDiscord(m.Author.Username, fmt.Sprintf("%s#%s", g.Name, c.Name), a.ProxyURL)
+		incomingDiscord(m.Author.Username, channel, a.ProxyURL)
 	}
+}
+
+func uploadToPtpb(s string) string {
+	resp, err := http.PostForm("https://ptpb.pw/",
+		url.Values{"c": {s}, "p": {"1"}})
+	defer resp.Body.Close()
+
+	if err != nil {
+		log.Errorf("Failed to upload to PTPB: %s", err)
+		return "Failed to upload to PTPB"
+	}
+	if resp.StatusCode == http.StatusOK {
+		return resp.Header.Get("Location")
+	}
+
+	log.Errorf("Failed to upload to PTPB: HTTP %d", resp.StatusCode)
+	ret, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Errorf("Failed to read body: %s", err)
+	} else {
+		log.Errorf(string(ret))
+	}
+	return fmt.Sprintf("Failed to upload to PTPB: HTTP %d", resp.StatusCode)
+
 }
 
 func dOutgoing(nick, channel, message string) {
