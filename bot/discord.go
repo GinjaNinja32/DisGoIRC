@@ -7,7 +7,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	discord "github.com/bwmarrin/discordgo"
-	"github.com/patrickmn/go-cache"
 )
 
 type DiscordConfig struct {
@@ -65,26 +64,6 @@ func dInit() {
 	log.Infof("Connected to Discord")
 }
 
-var (
-	guildCache = cache.New(5*time.Minute, 30*time.Second)
-)
-
-func dGuild(guildID string) *discord.Guild {
-	cached, ok := guildCache.Get(guildID)
-	if ok {
-		return cached.(*discord.Guild)
-	}
-
-	guild, err := dSession.Guild(guildID)
-	if err != nil {
-		log.Errorf("Failed to get guild with ID %s: %s", guildID, err)
-		return nil
-	}
-
-	guildCache.Set(guildID, guild, cache.DefaultExpiration)
-	return guild
-}
-
 func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 	if m.Author.ID == dBotID {
 		return
@@ -98,8 +77,9 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 
 	guildID := c.GuildID
 
-	g := dGuild(guildID)
-	if g == nil {
+	g, err := s.Guild(guildID)
+	if err != nil {
+		log.Errorf("Failed to get guild with ID %s: %s", guildID, err)
 		return
 	}
 
@@ -144,8 +124,9 @@ func dOutgoing(nick, channel, message string) {
 	guildID := dGuilds[chanParts[0]]
 	chanID := dGuildChans[chanParts[0]][chanParts[1]]
 
-	g := dGuild(guildID)
-	if g == nil {
+	g, err := dSession.Guild(guildID)
+	if err != nil {
+		log.Errorf("Failed to get guild with ID %s: %s", guildID, err)
 		return
 	}
 
