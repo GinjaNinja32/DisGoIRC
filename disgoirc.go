@@ -7,7 +7,7 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/GinjaNinja32/disgoirc/bot"
+	"github.com/GinjaNinja32/DisGoIRC/bot"
 )
 
 func main() {
