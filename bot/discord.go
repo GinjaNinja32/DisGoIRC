@@ -3,7 +3,6 @@ package bot
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 	discord "github.com/bwmarrin/discordgo"
