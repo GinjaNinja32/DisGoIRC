@@ -7,9 +7,9 @@ import (
 )
 
 type Config struct {
-	IRC     IRCConfig         "irc"
-	Discord DiscordConfig     "discord"
-	Mapping map[string]string "mapping"
+	IRC     IRCConfig         `json:"irc"`
+	Discord DiscordConfig     `json:"discord"`
+	Mapping map[string]string `json:"mapping"`
 }
 
 var (

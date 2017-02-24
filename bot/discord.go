@@ -12,7 +12,8 @@ import (
 )
 
 type DiscordConfig struct {
-	Token string "token"
+	Token        string `json:"token"`
+	UseNicknames bool   `json:"use_nicknames"`
 }
 
 var (
@@ -86,6 +87,7 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 	}
 
 	channel := fmt.Sprintf("%s#%s", g.Name, c.Name)
+	authorName := getDisplayNameForUser(m.Author, g.Members)
 
 	if m.Content != "" {
 		message := m.Content
@@ -104,7 +106,7 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 		for _, u := range g.Members {
 			find := fmt.Sprintf("<@%s>", u.User.ID)
 			find2 := fmt.Sprintf("<@!%s>", u.User.ID)
-			replace := fmt.Sprintf("@%s", u.User.Username)
+			replace := fmt.Sprintf("@%s", getDisplayNameForMember(u))
 			message = strings.Replace(message, find, replace, -1)
 			message = strings.Replace(message, find2, replace, -1)
 		}
@@ -122,19 +124,17 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 			url := uploadToPtpb(message)
 
 			for _, line := range lines[:2] {
-				incomingDiscord(m.Author.Username, channel, line)
+				incomingDiscord(authorName, channel, line)
 			}
-			incomingDiscord("[SYSTEM]", channel, fmt.Sprintf("full message from %s: %s", iAddAntiPing(m.Author.Username), url))
+			incomingDiscord("[SYSTEM]", channel, fmt.Sprintf("full message from %s: %s", iAddAntiPing(authorName), url))
 		} else {
 			for _, line := range lines {
-				incomingDiscord(m.Author.Username, channel, line)
+				incomingDiscord(authorName, channel, line)
 			}
 		}
-
-		//incomingDiscord(m.Author.Username, channel, message)
 	}
 	for _, a := range m.Attachments {
-		incomingDiscord(m.Author.Username, channel, a.ProxyURL)
+		incomingDiscord(authorName, channel, a.ProxyURL)
 	}
 }
 
@@ -185,7 +185,7 @@ func dOutgoing(nick, channel, message string) {
 
 	// Users
 	for _, u := range g.Members {
-		find := fmt.Sprintf("@%s", u.User.Username)
+		find := fmt.Sprintf("@%s", getDisplayNameForMember(u))
 		replace := fmt.Sprintf("<@%s>", u.User.ID)
 		message = strings.Replace(message, find, replace, -1)
 	}
@@ -198,4 +198,24 @@ func dOutgoing(nick, channel, message string) {
 	}
 
 	dSession.ChannelMessageSend(chanID, fmt.Sprintf("**<%s>** %s", nick, message))
+}
+
+func getDisplayNameForMember(member *discord.Member) string {
+	if conf.Discord.UseNicknames && member.Nick != "" {
+		return member.Nick
+	}
+
+	return member.User.Username
+}
+
+func getDisplayNameForUser(user *discord.User, members []*discord.Member) string {
+	if conf.Discord.UseNicknames {
+		for _, m := range members {
+			if m.User.ID == user.ID {
+				return getDisplayNameForMember(m)
+			}
+		}
+	}
+	
+	return user.Username
 }

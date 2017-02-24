@@ -11,12 +11,12 @@ import (
 )
 
 type IRCConfig struct {
-	Nick string "nick"
-	User string "user"
-	Pass string "pass"
+	Nick string `json:"nick"`
+	User string `json:"user"`
+	Pass string `json:"pass"`
 
-	SSL    bool   "ssl"
-	Server string "server"
+	SSL    bool   `json:"ssl"`
+	Server string `json:"server"`
 }
 
 var (
