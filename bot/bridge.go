@@ -55,7 +55,7 @@ func incomingDiscord(nick, channel, message string) {
 	iOutgoing(nick, ircChan, message)
 }
 
-var specialIrc = regexp.MustCompile("|[0-9]{0,2}")
+var specialIrc = regexp.MustCompile("|[0-9]{0,2}(,[0-9]{1,2})?")
 
 func fmtReplaceInPairs(msg, find, replace string) string {
 	r := regexp.MustCompile(find)
