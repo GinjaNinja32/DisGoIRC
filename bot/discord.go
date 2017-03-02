@@ -141,12 +141,12 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 func uploadToPtpb(s string) string {
 	resp, err := http.PostForm("https://ptpb.pw/",
 		url.Values{"c": {s}, "p": {"1"}})
-	defer resp.Body.Close()
 
 	if err != nil {
 		log.Errorf("Failed to upload to PTPB: %s", err)
 		return "Failed to upload to PTPB"
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusOK {
 		return resp.Header.Get("Location")
 	}
