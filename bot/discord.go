@@ -21,6 +21,8 @@ var (
 	dSession    *discord.Session
 	dGuilds     = map[string]string{}
 	dGuildChans = map[string]map[string]string{}
+
+	dMsgQueue = make(chan func())
 )
 
 func dInit() {
@@ -63,6 +65,12 @@ func dInit() {
 	if err != nil {
 		log.Fatalf("Failed to connect to Discord: %s", err)
 	}
+
+	go func() {
+		for f := range dMsgQueue {
+			f()
+		}
+	}()
 
 	log.Infof("Connected to Discord")
 }
@@ -197,7 +205,9 @@ func dOutgoing(nick, channel, message string) {
 		message = strings.Replace(message, find, replace, -1)
 	}
 
-	dSession.ChannelMessageSend(chanID, fmt.Sprintf("**<%s>** %s", nick, message))
+	dMsgQueue <- func() {
+		dSession.ChannelMessageSend(chanID, fmt.Sprintf("**<%s>** %s", nick, message))
+	}
 }
 
 func getDisplayNameForMember(member *discord.Member) string {
