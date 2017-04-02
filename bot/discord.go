@@ -112,9 +112,14 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 
 		// Users
 		for _, u := range g.Members {
+			display := getDisplayNameForMember(u)
+			if display == "" {
+				log.Errorf("%d/%q/%q had an invalid display name", u.User.ID, u.User.Username, u.Nick)
+				continue
+			}
 			find := fmt.Sprintf("<@%s>", u.User.ID)
 			find2 := fmt.Sprintf("<@!%s>", u.User.ID)
-			replace := fmt.Sprintf("@%s", getDisplayNameForMember(u))
+			replace := fmt.Sprintf("@%s", display)
 			message = strings.Replace(message, find, replace, -1)
 			message = strings.Replace(message, find2, replace, -1)
 		}
@@ -193,7 +198,12 @@ func dOutgoing(nick, channel, message string) {
 
 	// Users
 	for _, u := range g.Members {
-		find := fmt.Sprintf("@%s", getDisplayNameForMember(u))
+		display := getDisplayNameForMember(u)
+		if display == "" {
+			log.Errorf("%d/%q/%q had an invalid display name", u.User.ID, u.User.Username, u.Nick)
+			continue
+		}
+		find := fmt.Sprintf("@%s", display)
 		replace := fmt.Sprintf("<@%s>", u.User.ID)
 		message = strings.Replace(message, find, replace, -1)
 	}
