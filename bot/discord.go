@@ -133,10 +133,16 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 
 		// Multiline
 		lines := strings.Split(message, "\n")
-		if len(lines) > 3 {
+		lines, forceClip := clipLinesForIRC(lines)
+		if len(lines) > 3 || forceClip {
 			url := uploadToPtpb(message)
 
-			for _, line := range lines[:2] {
+			n := 2
+			if len(lines) < 2 {
+				n = len(lines)
+			}
+
+			for _, line := range lines[:n] {
 				incomingDiscord(authorName, channel, line)
 			}
 			incomingDiscord("[SYSTEM]", channel, fmt.Sprintf("full message from %s: %s", iAddAntiPing(authorName), url))
@@ -149,6 +155,32 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 	for _, a := range m.Attachments {
 		incomingDiscord(authorName, channel, a.ProxyURL)
 	}
+}
+
+func clipLinesForIRC(s []string) ([]string, bool) {
+	ret := []string{}
+	anyLineForceClip := false
+
+	for _, line := range s {
+		if len(line) < 300 {
+			ret = append(ret, line)
+		} else {
+			words := strings.Split(line, " ")
+			for len(words) != 0 {
+				l := words[0]
+				words = words[1:]
+				for len(words) != 0 && len(l)+len(words[0]) < 300 {
+					l = l + " " + words[0]
+					words = words[1:]
+				}
+
+				anyLineForceClip = anyLineForceClip || len(l) > 300
+				ret = append(ret, l)
+			}
+		}
+	}
+
+	return ret, anyLineForceClip
 }
 
 func uploadToPtpb(s string) string {
