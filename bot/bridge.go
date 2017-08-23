@@ -2,6 +2,7 @@ package bot
 
 import (
 	"regexp"
+	"strings"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -15,13 +16,18 @@ type Config struct {
 var (
 	conf           Config
 	inverseMapping map[string]string
+	modifiedMapping map[string]string
 )
 
 func Init(c Config) {
 	conf = c
 	inverseMapping = map[string]string{}
+	modifiedMapping = map[string]string{}
 	for k, v := range conf.Mapping {
-		inverseMapping[v] = k
+		ircChannelPassword := strings.Split(k, " ")
+		ircChannel := ircChannelPassword[0]
+		inverseMapping[v] = ircChannel
+		modifiedMapping[ircChannel] = v
 	}
 	dInit()
 	iInit()
@@ -30,7 +36,7 @@ func Init(c Config) {
 func incomingIRC(nick, channel, message string) {
 	log.Infof("IRC %s <%s> %s", channel, nick, message)
 
-	discordChan, ok := conf.Mapping[channel]
+	discordChan, ok := modifiedMapping[channel]
 	if !ok {
 		return
 	}
