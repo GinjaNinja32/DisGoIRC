@@ -11,7 +11,7 @@ setup:
 
 .PHONY: lint
 lint: deps
-	gometalinter ./...
+	gometalinter $(shell glide novendor)
 
 .PHONY: run
 run:
