@@ -1,4 +1,4 @@
-package: disgoirc
+package: github.com/GinjaNinja32/DisGoIRC
 import:
 - package: github.com/bwmarrin/discordgo
 - package: github.com/Sirupsen/logrus
