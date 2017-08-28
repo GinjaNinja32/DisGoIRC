@@ -44,7 +44,7 @@ func dInit() {
 
 	dBotID = u.ID
 
-	guilds, err := dSession.UserGuilds()
+	guilds, err := dSession.UserGuilds(99, "", "")
 	if err != nil {
 		log.Fatalf("Failed to get guilds: %s", err)
 	}
