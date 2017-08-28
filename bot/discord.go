@@ -11,6 +11,7 @@ import (
 	discord "github.com/bwmarrin/discordgo"
 )
 
+// DiscordConfig represents the required config to connect to Discord
 type DiscordConfig struct {
 	Token        string `json:"token"`
 	UseNicknames bool   `json:"use_nicknames"`
@@ -23,6 +24,10 @@ var (
 	dGuildChans = map[string]map[string]string{}
 
 	dMsgQueue = make(chan func())
+)
+
+const (
+	msgTypeText = "text"
 )
 
 func dInit() {
@@ -45,7 +50,8 @@ func dInit() {
 	}
 
 	for _, g := range guilds {
-		chans, err := dSession.GuildChannels(g.ID)
+		var chans []*discord.Channel
+		chans, err = dSession.GuildChannels(g.ID)
 		if err != nil {
 			log.Fatalf("Failed to get channels for %s: %s", g.Name, err)
 		}
@@ -53,7 +59,7 @@ func dInit() {
 		dGuilds[g.Name] = g.ID
 		dGuildChans[g.Name] = map[string]string{}
 		for _, c := range chans {
-			if c.Type == "text" {
+			if c.Type == msgTypeText {
 				dGuildChans[g.Name][c.Name] = c.ID
 			}
 		}
@@ -98,62 +104,72 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 	authorName := getDisplayNameForUser(m.Author, g.Members)
 
 	if m.Content != "" {
-		message := m.Content
+		message := convertMentionsForIRC(g, m)
 
-		// Channels
-		for _, c := range g.Channels {
-			if c.Type != "text" {
-				continue
-			}
-			find := fmt.Sprintf("<#%s>", c.ID)
-			replace := fmt.Sprintf("#%s", c.Name)
-			message = strings.Replace(message, find, replace, -1)
-		}
-
-		// Users
-		for _, u := range g.Members {
-			display := getDisplayNameForMember(u)
-			if display == "" {
-				log.Errorf("%d/%q/%q had an invalid display name", u.User.ID, u.User.Username, u.Nick)
-				continue
-			}
-			find := fmt.Sprintf("<@%s>", u.User.ID)
-			find2 := fmt.Sprintf("<@!%s>", u.User.ID)
-			replace := fmt.Sprintf("@%s", display)
-			message = strings.Replace(message, find, replace, -1)
-			message = strings.Replace(message, find2, replace, -1)
-		}
-
-		// Roles
-		for _, r := range g.Roles {
-			find := fmt.Sprintf("<@&%s>", r.ID)
-			replace := fmt.Sprintf("@%s", r.Name)
-			message = strings.Replace(message, find, replace, -1)
-		}
-
-		// Multiline
-		lines := strings.Split(message, "\n")
-		lines, forceClip := clipLinesForIRC(lines)
-		if len(lines) > 3 || forceClip {
-			url := uploadToPtpb(message)
-
-			n := 2
-			if len(lines) < 2 {
-				n = len(lines)
-			}
-
-			for _, line := range lines[:n] {
-				incomingDiscord(authorName, channel, line)
-			}
-			incomingDiscord("[SYSTEM]", channel, fmt.Sprintf("full message from %s: %s", iAddAntiPing(authorName), url))
-		} else {
-			for _, line := range lines {
-				incomingDiscord(authorName, channel, line)
-			}
-		}
+		dispatchMessageToIRC(authorName, channel, message)
 	}
 	for _, a := range m.Attachments {
 		incomingDiscord(authorName, channel, a.ProxyURL)
+	}
+}
+
+func convertMentionsForIRC(g *discord.Guild, m *discord.MessageCreate) string {
+	message := m.Content
+
+	// Channels
+	for _, c := range g.Channels {
+		if c.Type != msgTypeText {
+			continue
+		}
+		find := fmt.Sprintf("<#%s>", c.ID)
+		replace := fmt.Sprintf("#%s", c.Name)
+		message = strings.Replace(message, find, replace, -1)
+	}
+
+	// Users
+	for _, u := range g.Members {
+		display := getDisplayNameForMember(u)
+		if display == "" {
+			log.Errorf("%s/%q/%q had an invalid display name", u.User.ID, u.User.Username, u.Nick)
+			continue
+		}
+		find := fmt.Sprintf("<@%s>", u.User.ID)
+		find2 := fmt.Sprintf("<@!%s>", u.User.ID)
+		replace := fmt.Sprintf("@%s", display)
+		message = strings.Replace(message, find, replace, -1)
+		message = strings.Replace(message, find2, replace, -1)
+	}
+
+	// Roles
+	for _, r := range g.Roles {
+		find := fmt.Sprintf("<@&%s>", r.ID)
+		replace := fmt.Sprintf("@%s", r.Name)
+		message = strings.Replace(message, find, replace, -1)
+	}
+
+	return message
+}
+
+func dispatchMessageToIRC(authorName, channel, message string) {
+	// Multiline
+	lines := strings.Split(message, "\n")
+	lines, forceClip := clipLinesForIRC(lines)
+	if len(lines) > 3 || forceClip {
+		url := uploadToPtpb(message)
+
+		n := 2
+		if len(lines) < 2 {
+			n = len(lines)
+		}
+
+		for _, line := range lines[:n] {
+			incomingDiscord(authorName, channel, line)
+		}
+		incomingDiscord("[SYSTEM]", channel, fmt.Sprintf("full message from %s: %s", iAddAntiPing(authorName), url))
+	} else {
+		for _, line := range lines {
+			incomingDiscord(authorName, channel, line)
+		}
 	}
 }
 
@@ -191,7 +207,9 @@ func uploadToPtpb(s string) string {
 		log.Errorf("Failed to upload to PTPB: %s", err)
 		return "Failed to upload to PTPB"
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	if resp.StatusCode == http.StatusOK {
 		return resp.Header.Get("Location")
 	}
@@ -220,7 +238,7 @@ func dOutgoing(nick, channel, message string) {
 
 	// Channels
 	for _, c := range g.Channels {
-		if c.Type != "text" {
+		if c.Type != msgTypeText {
 			continue
 		}
 		find := fmt.Sprintf("#%s", c.Name)
@@ -232,7 +250,7 @@ func dOutgoing(nick, channel, message string) {
 	for _, u := range g.Members {
 		display := getDisplayNameForMember(u)
 		if display == "" {
-			log.Errorf("%d/%q/%q had an invalid display name", u.User.ID, u.User.Username, u.Nick)
+			log.Errorf("%s/%q/%q had an invalid display name", u.User.ID, u.User.Username, u.Nick)
 			continue
 		}
 		find := fmt.Sprintf("@%s", display)
@@ -248,7 +266,10 @@ func dOutgoing(nick, channel, message string) {
 	}
 
 	dMsgQueue <- func() {
-		dSession.ChannelMessageSend(chanID, fmt.Sprintf("**<%s>** %s", nick, message))
+		_, err := dSession.ChannelMessageSend(chanID, fmt.Sprintf("**<%s>** %s", nick, message))
+		if err != nil {
+			log.Errorf("Failed to send message to %s: <%s> %s", chanID, nick, message)
+		}
 	}
 }
 
@@ -268,6 +289,6 @@ func getDisplayNameForUser(user *discord.User, members []*discord.Member) string
 			}
 		}
 	}
-	
+
 	return user.Username
 }

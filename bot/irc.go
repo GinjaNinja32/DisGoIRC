@@ -10,6 +10,7 @@ import (
 	irc "github.com/thoj/go-ircevent"
 )
 
+// IRCConfig represents the required configuration to connect to IRC
 type IRCConfig struct {
 	Nick string `json:"nick"`
 	User string `json:"user"`

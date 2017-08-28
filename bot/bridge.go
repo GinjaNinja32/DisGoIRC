@@ -6,6 +6,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+// Config requires the required config to connect to IRC/Discord and the mapping between them
 type Config struct {
 	IRC     IRCConfig         `json:"irc"`
 	Discord DiscordConfig     `json:"discord"`
@@ -17,6 +18,7 @@ var (
 	inverseMapping map[string]string
 )
 
+// Init starts the bridge with the given config
 func Init(c Config) {
 	conf = c
 	inverseMapping = map[string]string{}

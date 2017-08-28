@@ -22,12 +22,12 @@ func main() {
 	}
 
 	var conf bot.Config
-	confJson, err := ioutil.ReadFile(*confLocation)
+	confJSON, err := ioutil.ReadFile(*confLocation)
 	if err != nil {
-		log.Fatalf("Failed to read config file %s: %s", confLocation, err)
+		log.Fatalf("Failed to read config file %s: %s", *confLocation, err)
 	}
 
-	err = json.Unmarshal(confJson, &conf)
+	err = json.Unmarshal(confJSON, &conf)
 	if err != nil {
 		log.Fatalf("Failed to parse config file: %s", err)
 	}
@@ -36,5 +36,4 @@ func main() {
 
 	log.Infof("Bot running.")
 	<-make(chan struct{})
-	return
 }
