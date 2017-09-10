@@ -50,6 +50,9 @@ func TestParseIRC(t *testing.T) {
 				{"foo", Bold | Italic | Underline, Blue, Black},
 				{"bar", Bold | Italic | Underline, Default, Default},
 			}},
+			{"ΨΩΔ", []Span{
+				{"ΨΩΔ", None, Default, Default},
+			}},
 		}
 
 		for _, c := range cases {
@@ -106,6 +109,9 @@ func TestRenderIRC(t *testing.T) {
 			{"\x02\x0302,01foo\x03\x02\x021bar", []Span{
 				{"foo", Bold, Blue, Black},
 				{"1bar", Bold, Default, Default},
+			}},
+			{"ΨΩΔ", []Span{
+				{"ΨΩΔ", None, Default, Default},
 			}},
 		}
 

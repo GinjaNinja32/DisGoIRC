@@ -26,6 +26,7 @@ func ParseIRC(s string) FormattedString {
 	spans := []Span{}
 
 	currentSpan := Span{}
+	currentStr := []byte{}
 
 	data := []byte(s)
 
@@ -33,15 +34,15 @@ func ParseIRC(s string) FormattedString {
 		c := data[i]
 
 		if _, ok := ircFormatChars[c]; !ok && c != '\x03' && c != '\x0f' {
-			currentSpan.Text += string(c)
+			currentStr = append(currentStr, c)
 			continue
 		}
 
-		if currentSpan.Text != "" {
+		if len(currentStr) != 0 {
+			currentSpan.Text = string(currentStr)
+			currentStr = currentStr[:0] // slice it off to avoid having to reallocate the array
 			spans = append(spans, currentSpan)
 		}
-
-		currentSpan.Text = ""
 
 		if formatCode, ok := ircFormatChars[c]; ok {
 			currentSpan.Format ^= formatCode
@@ -56,7 +57,8 @@ func ParseIRC(s string) FormattedString {
 		}
 	}
 
-	if currentSpan.Text != "" {
+	if len(currentStr) != 0 {
+		currentSpan.Text = string(currentStr)
 		spans = append(spans, currentSpan)
 	}
 
