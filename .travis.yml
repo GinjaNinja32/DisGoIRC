@@ -5,6 +5,10 @@ go:
   - 1.8
   - master
 
-install: make setup
+install:
+- make setup
+- make deps
 
-script: make lint
+script:
+- make lint
+- make test
