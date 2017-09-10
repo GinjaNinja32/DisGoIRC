@@ -28,10 +28,6 @@ var (
 	dMsgQueue = make(chan func())
 )
 
-const (
-	msgTypeText = "text"
-)
-
 func dInit() {
 	d, err := discord.New(fmt.Sprintf("Bot %s", conf.Discord.Token))
 	dSession = d
@@ -61,7 +57,7 @@ func dInit() {
 		dGuilds[g.Name] = g.ID
 		dGuildChans[g.Name] = map[string]string{}
 		for _, c := range chans {
-			if c.Type == msgTypeText {
+			if c.Type == discord.ChannelTypeGuildText {
 				dGuildChans[g.Name][c.Name] = c.ID
 			}
 		}
@@ -120,7 +116,7 @@ func convertMentionsForIRC(g *discord.Guild, m *discord.MessageCreate) string {
 
 	// Channels
 	for _, c := range g.Channels {
-		if c.Type != msgTypeText {
+		if c.Type != discord.ChannelTypeGuildText {
 			continue
 		}
 		find := fmt.Sprintf("<#%s>", c.ID)
@@ -242,7 +238,7 @@ func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 
 	// Channels
 	for _, c := range g.Channels {
-		if c.Type != msgTypeText {
+		if c.Type != discord.ChannelTypeGuildText {
 			continue
 		}
 		find := fmt.Sprintf("#%s", c.Name)
