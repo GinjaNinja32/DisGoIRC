@@ -1,9 +1,9 @@
 package bot
 
 import (
-	"regexp"
-
 	log "github.com/Sirupsen/logrus"
+
+	"github.com/GinjaNinja32/DisGoIRC/format"
 )
 
 // Config requires the required config to connect to IRC/Discord and the mapping between them
@@ -39,9 +39,9 @@ func incomingIRC(nick, channel, message string) {
 
 	log.Debugf("Mapping IRC:%s to DIS:%s", channel, discordChan)
 
-	message = fmtIrcToDiscord(message)
+	fs := format.ParseIRC(message)
 
-	dOutgoing(nick, discordChan, message)
+	dOutgoing(nick, discordChan, fs)
 }
 
 func incomingDiscord(nick, channel, message string) {
@@ -54,28 +54,7 @@ func incomingDiscord(nick, channel, message string) {
 
 	log.Debugf("Mapping DIS:%s to IRC:%s", channel, ircChan)
 
-	iOutgoing(nick, ircChan, message)
-}
+	fs := format.ParseDiscord(message)
 
-var specialIrc = regexp.MustCompile("|[0-9]{0,2}(,[0-9]{1,2})?")
-
-func fmtReplaceInPairs(msg, find, replace string) string {
-	r := regexp.MustCompile(find)
-	active := false
-	msg = r.ReplaceAllStringFunc(msg, func(a string) string {
-		active = !active
-		return replace
-	})
-	if active {
-		msg = msg + replace
-	}
-	return msg
-}
-
-func fmtIrcToDiscord(msg string) string {
-	msg = specialIrc.ReplaceAllString(msg, "")
-	msg = fmtReplaceInPairs(msg, "", "**")
-	msg = fmtReplaceInPairs(msg, "", "__")
-	msg = fmtReplaceInPairs(msg, "", "*")
-	return msg
+	iOutgoing(nick, ircChan, fs)
 }

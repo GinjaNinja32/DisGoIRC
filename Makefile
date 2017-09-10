@@ -9,8 +9,12 @@ setup:
 	go get -u github.com/alecthomas/gometalinter
 	gometalinter -i
 
+.PHONY: test
+test:
+	go test -v $(shell glide novendor)
+
 .PHONY: lint
-lint: deps
+lint:
 	gometalinter $(shell glide novendor)
 
 .PHONY: run

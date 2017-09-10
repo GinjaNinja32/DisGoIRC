@@ -9,6 +9,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	discord "github.com/bwmarrin/discordgo"
+
+	"github.com/GinjaNinja32/DisGoIRC/format"
 )
 
 // DiscordConfig represents the required config to connect to Discord
@@ -225,7 +227,7 @@ func uploadToPtpb(s string) string {
 
 }
 
-func dOutgoing(nick, channel, message string) {
+func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 	chanParts := strings.Split(channel, "#")
 	guildID := dGuilds[chanParts[0]]
 	chanID := dGuildChans[chanParts[0]][chanParts[1]]
@@ -235,6 +237,8 @@ func dOutgoing(nick, channel, message string) {
 		log.Errorf("Failed to get guild with ID %s: %s", guildID, err)
 		return
 	}
+
+	message := messageParsed.RenderDiscord()
 
 	// Channels
 	for _, c := range g.Channels {

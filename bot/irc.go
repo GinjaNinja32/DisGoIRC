@@ -8,6 +8,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	irc "github.com/thoj/go-ircevent"
+
+	"github.com/GinjaNinja32/DisGoIRC/format"
 )
 
 // IRCConfig represents the required configuration to connect to IRC
@@ -64,7 +66,7 @@ func iAddAntiPing(s string) string {
 	return outgoingNickRegex.ReplaceAllString(s, "$0\ufeff")
 }
 
-func iOutgoing(nick, channel, message string) {
+func iOutgoing(nick, channel string, message format.FormattedString) {
 	nick = iAddAntiPing(nick)
-	iSession.Privmsg(channel, fmt.Sprintf("<%s> %s", nick, message))
+	iSession.Privmsg(channel, fmt.Sprintf("<%s> %s", nick, message.RenderIRC()))
 }

@@ -3,3 +3,5 @@ import:
 - package: github.com/bwmarrin/discordgo
 - package: github.com/Sirupsen/logrus
 - package: github.com/thoj/go-ircevent
+testImport:
+- package: github.com/smartystreets/goconvey
