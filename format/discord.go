@@ -1,7 +1,6 @@
 package format
 
 import (
-	"fmt"
 	"regexp"
 )
 
@@ -12,7 +11,7 @@ func ParseDiscord(s string) FormattedString {
 	}
 }
 
-var discordEscape = regexp.MustCompile(`\*|_`)
+var discordEscape = regexp.MustCompile(`[\\*_]`)
 var backticks = regexp.MustCompile("`+")
 
 // RenderDiscord renders a FormattedString into a Discord message
@@ -31,17 +30,16 @@ func (fs FormattedString) RenderDiscord() string {
 			firstBackticks := backticks.FindIndex(data[begin:])
 			if firstBackticks != nil {
 				end = begin + firstBackticks[1]
-				fmt.Printf("%q %q %q %+v %+v\n", string(finishedData), string(data), string(data[begin:]), begin, end)
-				bt = !bt
 			} else {
 				end = len(data)
 			}
 
-			if !bt {
+			if bt {
 				finishedData = append(finishedData, data[begin:end]...)
 			} else {
 				finishedData = append(finishedData, discordEscape.ReplaceAllFunc(data[begin:end], escape)...)
 			}
+			bt = !bt
 			begin = end
 		}
 

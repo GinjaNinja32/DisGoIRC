@@ -56,7 +56,7 @@ func iPrivmsg(e *irc.Event) {
 	incomingIRC(e.Nick, strings.ToLower(e.Arguments[0]), e.Message())
 }
 func iAction(e *irc.Event) {
-	incomingIRC(e.Nick, strings.ToLower(e.Arguments[0]), fmt.Sprintf("_%s_", e.Message()))
+	incomingIRC(e.Nick, strings.ToLower(e.Arguments[0]), fmt.Sprintf("\x1d%s\x1d", e.Message()))
 }
 
 var outgoingNickRegex = regexp.MustCompile(`\b[a-zA-Z0-9]`)
