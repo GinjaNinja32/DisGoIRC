@@ -223,6 +223,12 @@ func uploadToPtpb(s string) string {
 
 }
 
+var discordEscaper = strings.NewReplacer(
+	"\\", "\\\\",
+	"*", "\\*",
+	"_", "\\_",
+)
+
 func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 	chanParts := strings.Split(channel, "#")
 	guildID := dGuilds[chanParts[0]]
@@ -241,7 +247,7 @@ func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 		if c.Type != discord.ChannelTypeGuildText {
 			continue
 		}
-		find := fmt.Sprintf("#%s", c.Name)
+		find := discordEscaper.Replace(fmt.Sprintf("#%s", c.Name))
 		replace := fmt.Sprintf("<#%s>", c.ID)
 		message = strings.Replace(message, find, replace, -1)
 	}
@@ -253,14 +259,14 @@ func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 			log.Errorf("%s/%q/%q had an invalid display name", u.User.ID, u.User.Username, u.Nick)
 			continue
 		}
-		find := fmt.Sprintf("@%s", display)
+		find := discordEscaper.Replace(fmt.Sprintf("@%s", display))
 		replace := fmt.Sprintf("<@%s>", u.User.ID)
 		message = strings.Replace(message, find, replace, -1)
 	}
 
 	// Roles
 	for _, r := range g.Roles {
-		find := fmt.Sprintf("@%s", r.Name)
+		find := discordEscaper.Replace(fmt.Sprintf("@%s", r.Name))
 		replace := fmt.Sprintf("<@&%s>", r.ID)
 		message = strings.Replace(message, find, replace, -1)
 	}

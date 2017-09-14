@@ -2,6 +2,7 @@ package format
 
 import (
 	"regexp"
+	"strings"
 )
 
 // ParseDiscord parses an incoming Discord message to a FormattedString
@@ -15,7 +16,7 @@ var discordEscape = regexp.MustCompile(`[\\*_]`)
 var backticks = regexp.MustCompile("`+")
 
 // RenderDiscord renders a FormattedString into a Discord message
-func (fs FormattedString) RenderDiscord() string {
+func (fs FormattedString) RenderDiscord() string { // nolint: gocyclo
 	output := ""
 	escape := func(s []byte) []byte { return append([]byte("\\"), s...) }
 	for _, span := range fs {
@@ -37,7 +38,14 @@ func (fs FormattedString) RenderDiscord() string {
 			if bt {
 				finishedData = append(finishedData, data[begin:end]...)
 			} else {
-				finishedData = append(finishedData, discordEscape.ReplaceAllFunc(data[begin:end], escape)...)
+				words := strings.SplitAfter(string(data[begin:end]), " ")
+				for _, word := range words {
+					if strings.HasPrefix(word, "http://") || strings.HasPrefix(word, "https://") {
+						finishedData = append(finishedData, []byte(word)...)
+					} else {
+						finishedData = append(finishedData, discordEscape.ReplaceAllFunc([]byte(word), escape)...)
+					}
+				}
 			}
 			bt = !bt
 			begin = end
