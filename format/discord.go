@@ -1,6 +1,7 @@
 package format
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -14,6 +15,8 @@ func ParseDiscord(s string) FormattedString {
 
 var discordEscape = regexp.MustCompile(`[\\*_]`)
 var backticks = regexp.MustCompile("`+")
+
+var trimmer = regexp.MustCompile(`^(\s*)(.*?\S)?(\s*)$`)
 
 // RenderDiscord renders a FormattedString into a Discord message
 func (fs FormattedString) RenderDiscord() string { // nolint: gocyclo
@@ -53,16 +56,31 @@ func (fs FormattedString) RenderDiscord() string { // nolint: gocyclo
 
 		t := string(finishedData)
 
-		if (span.Format & Italic) != 0 {
-			t = "*" + t + "*"
+		matches := trimmer.FindAllStringSubmatch(t, -1)
+		fmt.Printf("%q, %#v\n", t, matches)
+
+		initial := matches[0][1]
+		text := matches[0][2]
+		final := matches[0][3]
+
+		if text != "" {
+			if (span.Format & Italic) != 0 {
+				text = "*" + text + "*"
+			}
+			if (span.Format & Bold) != 0 {
+				text = "**" + text + "**"
+			}
+			if (span.Format & Underline) != 0 {
+				text = "__" + text + "__"
+			}
+
+			// add a U+FEFF to avoid running together format codes; "*foo*\ufeff**bar**" instead of "*foo***bar**"
+			if final == "" && span.Format != None {
+				text = text + "\uFEFF"
+			}
 		}
-		if (span.Format & Bold) != 0 {
-			t = "**" + t + "**"
-		}
-		if (span.Format & Underline) != 0 {
-			t = "__" + t + "__"
-		}
-		output += t + "\ufeff" // add a U+FEFF to avoid running together format codes; "*foo*\ufeff**bar**" instead of "*foo***bar**"
+
+		output += initial + text + final
 	}
 
 	return output
