@@ -17,6 +17,10 @@ test:
 lint:
 	gometalinter $(shell glide novendor)
 
+.PHONY: build
+build:
+	go build -ldflags=-s disgoirc.go
+
 .PHONY: run
 run:
 	go run disgoirc.go
