@@ -1,7 +1,6 @@
 package format
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 )
@@ -14,6 +13,7 @@ func ParseDiscord(s string) FormattedString {
 }
 
 var discordEscape = regexp.MustCompile(`[\\*_]`)
+var discordEscapeNoUnderscore = regexp.MustCompile(`[\\*]`)
 var backticks = regexp.MustCompile("`+")
 
 var trimmer = regexp.MustCompile(`^(\s*)(.*?\S)?(\s*)$`)
@@ -45,8 +45,21 @@ func (fs FormattedString) RenderDiscord() string { // nolint: gocyclo
 				for _, word := range words {
 					if strings.HasPrefix(word, "http://") || strings.HasPrefix(word, "https://") {
 						finishedData = append(finishedData, []byte(word)...)
-					} else {
-						finishedData = append(finishedData, discordEscape.ReplaceAllFunc([]byte(word), escape)...)
+					} else if len(word) > 0 {
+						first := word[0]
+						var last byte
+						for n := 1; n < len(word); n++ {
+							if word[len(word)-n] != ' ' {
+								last = word[len(word)-n]
+								break
+							}
+						}
+
+						if first == ':' && last == ':' {
+							finishedData = append(finishedData, discordEscapeNoUnderscore.ReplaceAllFunc([]byte(word), escape)...)
+						} else {
+							finishedData = append(finishedData, discordEscape.ReplaceAllFunc([]byte(word), escape)...)
+						}
 					}
 				}
 			}
@@ -57,7 +70,6 @@ func (fs FormattedString) RenderDiscord() string { // nolint: gocyclo
 		t := string(finishedData)
 
 		matches := trimmer.FindAllStringSubmatch(t, -1)
-		fmt.Printf("%q, %#v\n", t, matches)
 
 		initial := matches[0][1]
 		text := matches[0][2]
