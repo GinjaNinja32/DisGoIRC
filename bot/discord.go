@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -110,7 +111,6 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 		incomingDiscord(authorName, channel, a.ProxyURL)
 	}
 }
-
 func convertMentionsForIRC(g *discord.Guild, m *discord.MessageCreate) string {
 	message := m.Content
 
@@ -229,6 +229,43 @@ var discordEscaper = strings.NewReplacer(
 	"_", "\\_",
 )
 
+// StringReplace represents a single string replacement
+type StringReplace struct {
+	Find    string
+	Replace string
+}
+
+// StringReplaceGroup represents a group of string replacements to be performed longest-match-first
+type StringReplaceGroup []StringReplace
+
+// Add adds a find/replace pair to this group
+func (s *StringReplaceGroup) Add(find, replace string) {
+	*s = append(*s, StringReplace{find, replace})
+}
+
+// Replace performs the replacement represented by this group on the string `str`, returning the result.
+// Replacements are performed in length order, longest first.
+func (s *StringReplaceGroup) Replace(str string) string {
+	sort.Sort(s)
+	for _, r := range *s {
+		str = strings.Replace(str, r.Find, r.Replace, -1)
+	}
+	return str
+}
+
+func (s StringReplaceGroup) Len() int      { return len(s) }
+func (s StringReplaceGroup) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+func (s StringReplaceGroup) Less(i, j int) bool {
+	si := s[i].Find
+	sj := s[j].Find
+
+	if len(si) > len(sj) {
+		return true
+	}
+
+	return si < sj
+}
+
 func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 	chanParts := strings.Split(channel, "#")
 	guildID := dGuilds[chanParts[0]]
@@ -253,6 +290,7 @@ func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 	}
 
 	// Users
+	var sr StringReplaceGroup
 	for _, u := range g.Members {
 		display := getDisplayNameForMember(u)
 		if display == "" {
@@ -261,8 +299,9 @@ func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 		}
 		find := discordEscaper.Replace(fmt.Sprintf("@%s", display))
 		replace := fmt.Sprintf("<@%s>", u.User.ID)
-		message = strings.Replace(message, find, replace, -1)
+		sr.Add(find, replace)
 	}
+	message = sr.Replace(message)
 
 	// Roles
 	for _, r := range g.Roles {

@@ -1,4 +1,4 @@
 glide.lock
 vendor
-conf.json
+*conf*.json
 disgoirc
