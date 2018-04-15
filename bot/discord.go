@@ -145,6 +145,13 @@ func convertMentionsForIRC(g *discord.Guild, m *discord.MessageCreate) string {
 		message = strings.Replace(message, find, replace, -1)
 	}
 
+	// Emojis
+	for _, e := range g.Emojis {
+		find := fmt.Sprintf("<:%s:%s>", e.Name, e.ID)
+		replace := fmt.Sprintf(":%s:", e.Name)
+		message = strings.Replace(message, find, replace, -1)
+	}
+
 	return message
 }
 
@@ -307,6 +314,13 @@ func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 	for _, r := range g.Roles {
 		find := discordEscaper.Replace(fmt.Sprintf("@%s", r.Name))
 		replace := fmt.Sprintf("<@&%s>", r.ID)
+		message = strings.Replace(message, find, replace, -1)
+	}
+
+	// Emojis
+	for _, e := range g.Emojis {
+		find := fmt.Sprintf(":%s:", e.Name)
+		replace := fmt.Sprintf("<:%s:%s>", e.Name, e.ID)
 		message = strings.Replace(message, find, replace, -1)
 	}
 
