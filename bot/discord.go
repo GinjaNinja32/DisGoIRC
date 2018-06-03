@@ -266,8 +266,8 @@ func (s StringReplaceGroup) Less(i, j int) bool {
 	si := s[i].Find
 	sj := s[j].Find
 
-	if len(si) > len(sj) {
-		return true
+	if len(si) != len(sj) {
+		return len(si) > len(sj)
 	}
 
 	return si < sj
