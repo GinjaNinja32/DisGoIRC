@@ -4,6 +4,7 @@
 		"user": "DisGoIRC",
 		"pass": "my-irc-password",
 		"ssl": true,
+		"ssl_verify": true,
 		"server": "irc.example.com:6697"
 	},
 	"discord": {

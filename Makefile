@@ -1,4 +1,7 @@
 
+.PHONY: all
+all: setup deps build
+
 .PHONY: deps
 deps:
 	glide up

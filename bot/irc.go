@@ -18,8 +18,9 @@ type IRCConfig struct {
 	User string `json:"user"`
 	Pass string `json:"pass"`
 
-	SSL    bool   `json:"ssl"`
-	Server string `json:"server"`
+	SSL       bool   `json:"ssl"`
+	SSLVerify bool   `json:"ssl_verify"`
+	Server    string `json:"server"`
 }
 
 var (
@@ -31,7 +32,10 @@ func iInit() {
 	iSession = irc.IRC(c.Nick, c.User)
 
 	iSession.UseTLS = c.SSL
-	iSession.TLSConfig = &tls.Config{InsecureSkipVerify: true} // don't verify SSL certs
+	// InsecureSkipVerify may be required to communicate with IRC servers.
+	if !c.SSLVerify {
+		iSession.TLSConfig = &tls.Config{InsecureSkipVerify: true} // nolint: gas
+	}
 	iSession.Password = c.Pass
 	iSession.AddCallback("PRIVMSG", iPrivmsg)
 	iSession.AddCallback("CTCP_ACTION", iAction)
