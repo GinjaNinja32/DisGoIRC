@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	irc "github.com/thoj/go-ircevent"
 
 	"github.com/GinjaNinja32/DisGoIRC/format"

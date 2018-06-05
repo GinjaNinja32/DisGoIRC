@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	discord "github.com/bwmarrin/discordgo"
 
 	"github.com/GinjaNinja32/DisGoIRC/format"
