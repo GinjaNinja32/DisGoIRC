@@ -34,7 +34,7 @@ func iInit() {
 	iSession.UseTLS = c.SSL
 	// InsecureSkipVerify may be required to communicate with IRC servers.
 	if !c.SSLVerify {
-		iSession.TLSConfig = &tls.Config{InsecureSkipVerify: true} // nolint: gas
+		iSession.TLSConfig = &tls.Config{InsecureSkipVerify: true} // nolint: gosec
 	}
 	iSession.Password = c.Pass
 	iSession.AddCallback("PRIVMSG", iPrivmsg)

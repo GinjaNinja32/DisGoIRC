@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -70,14 +72,24 @@ var ircColorCode = regexp.MustCompile("([0-9]{0,2})(,([0-9]{0,2}))?")
 func parseIRCColorCode(data []byte, currentSpan *Span) (length int) {
 	colorCode := ircColorCode.FindSubmatch(data)
 
+	var err error
+
 	fgSpecifier := -1
 	if len(colorCode[1]) != 0 {
-		fgSpecifier, _ = strconv.Atoi(string(colorCode[1]))
+		fgSpecifier, err = strconv.Atoi(string(colorCode[1]))
+		if err != nil {
+			log.Errorf("failed to convert %q to an integer, despite matching color code regex: %s", colorCode[1], err)
+			return 0
+		}
 	}
 
 	bgSpecifier := -1
 	if len(colorCode[3]) != 0 {
-		bgSpecifier, _ = strconv.Atoi(string(colorCode[3]))
+		bgSpecifier, err = strconv.Atoi(string(colorCode[3]))
+		if err != nil {
+			log.Errorf("failed to convert %q to an integer, despite matching color code regex: %s", colorCode[1], err)
+			return 0
+		}
 	}
 
 	if len(colorCode[2]) != 0 { // If comma was found

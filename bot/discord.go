@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"time"
 	"net/url"
 	"sort"
 	"strings"
+	"time"
 
-	log "github.com/sirupsen/logrus"
 	discord "github.com/bwmarrin/discordgo"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/GinjaNinja32/DisGoIRC/format"
 )
@@ -230,7 +230,7 @@ func uploadToPtpb(s string) string {
 		return "Failed to upload to PTPB"
 	}
 	defer func() {
-		_ = resp.Body.Close()
+		resp.Body.Close() // nolint: gosec, errcheck
 	}()
 	if resp.StatusCode == http.StatusOK {
 		return resp.Header.Get("Location")
