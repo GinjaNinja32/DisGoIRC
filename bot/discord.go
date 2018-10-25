@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -272,7 +273,7 @@ func (s *StringReplaceGroup) Add(find, replace string) {
 func (s *StringReplaceGroup) Replace(str string) string {
 	sort.Sort(s)
 	for _, r := range *s {
-		str = strings.Replace(str, r.Find, r.Replace, -1)
+		str = regexp.MustCompile(regexp.QuoteMeta(r.Find)+`\b`).ReplaceAllString(str, r.Replace)
 	}
 	return str
 }
