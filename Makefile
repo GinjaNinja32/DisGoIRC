@@ -12,7 +12,7 @@ test:
 
 .PHONY: lint
 lint:
-	gometalinter ./...
+	gometalinter --vendor ./...
 
 .PHONY: build
 build:
