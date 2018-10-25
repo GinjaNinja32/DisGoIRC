@@ -11,6 +11,7 @@
 	"discord": {
 		"token": "DISCORD-TOKEN-GOES-HERE",
 		"use_nicknames": false,
+		"forward_embeds": true,
 		"command_chars": "="
 	},
 	"mapping": {

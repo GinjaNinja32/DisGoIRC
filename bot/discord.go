@@ -36,9 +36,10 @@ func retryErrors(desc string, f func() error) {
 
 // DiscordConfig represents the required config to connect to Discord
 type DiscordConfig struct {
-	Token        string `json:"token"`
-	UseNicknames bool   `json:"use_nicknames"`
-	CommandChars string `json:"command_chars"`
+	Token         string `json:"token"`
+	UseNicknames  bool   `json:"use_nicknames"`
+	ForwardEmbeds bool   `json:"forward_embeds"`
+	CommandChars  string `json:"command_chars"`
 }
 
 var (
@@ -129,7 +130,121 @@ func dMessageCreate(s *discord.Session, m *discord.MessageCreate) {
 	for _, a := range m.Attachments {
 		incomingDiscord(authorName, channel, a.ProxyURL)
 	}
+	if conf.Discord.ForwardEmbeds && m.Content == "" && m.Embeds != nil && len(m.Embeds) != 0 {
+		for _, e := range m.Embeds {
+			handleEmbed(e, channel, authorName)
+		}
+	}
 }
+
+func handleEmbed(e *discord.MessageEmbed, channel, authorName string) {
+	if e.Title == "" && e.Description == "" {
+		// Probably just a link - skip it
+		return
+	}
+	ircColor := colorToIRCCompatible(e.Color)
+
+	description := linkRegex.ReplaceAllString(e.Description, "$1 <$2>")
+
+	url := ""
+	if e.URL != "" {
+		url = " <" + e.URL + ">"
+	}
+
+	outLines := []string{}
+
+	if e.Author != nil && e.Author.Name != "" {
+		outLines = append(outLines, fmt.Sprintf("%s <%s>", e.Author.Name, e.Author.URL))
+	}
+	outLines = append(outLines, fmt.Sprintf("%s%s", e.Title, url))
+
+	if description != "" {
+		lines := strings.Split(description, "\n")
+		lines, forceClip := clipLinesForIRC(lines)
+		if len(lines) > 3 || forceClip {
+			url := uploadToPtpb(description)
+
+			n := 2
+			if len(lines) < 2 {
+				n = len(lines)
+			}
+
+			outLines = append(outLines, lines[:n]...)
+			outLines = append(outLines, fmt.Sprintf("[full message: %s]", url))
+		} else {
+			outLines = append(outLines, lines...)
+		}
+	}
+
+	for i, line := range outLines {
+		prefix := "┃"
+		if len(outLines) == 1 {
+			prefix = "│"
+		} else if i == 0 {
+			prefix = "╽"
+		} else if i == len(outLines)-1 {
+			prefix = "╿"
+		}
+
+		incomingDiscord(authorName, channel, fmt.Sprintf("\x03%02d%s\x03 %s", ircColor, prefix, line))
+	}
+}
+
+var linkRegex = regexp.MustCompile(`\[([^][]+)\]\(([^()]+)\)`)
+
+var ircColors = [][3]uint8{
+	//{0xFF, 0xFF, 0xFF},
+	//{0x00, 0x00, 0x00}, // don't use black or white
+	{0x00, 0x00, 0xAA},
+	{0x00, 0xAA, 0x00},
+	{0xFF, 0x55, 0x55},
+	{0xAA, 0x00, 0x00},
+	{0xAA, 0x00, 0xAA},
+	{0xFF, 0x55, 0x55},
+	{0xFF, 0xFF, 0x55},
+	{0x55, 0xFF, 0x55},
+	{0x00, 0xAA, 0xAA},
+	{0x55, 0xFF, 0xFF},
+	{0x55, 0x55, 0xFF},
+	{0xFF, 0x55, 0xFF},
+	{0x55, 0x55, 0x55},
+	{0xAA, 0xAA, 0xAA},
+}
+
+func squaredDifference(a, b uint8) (diff uint32) {
+	if a > b {
+		diff = uint32(a - b)
+	} else {
+		diff = uint32(b - a)
+	}
+
+	diff *= diff
+	return
+}
+
+func colorToIRCCompatible(color int) uint8 {
+	target := [3]uint8{
+		uint8(color >> 16),
+		uint8(color >> 8),
+		uint8(color),
+	}
+
+	minDistance := uint32(0xFFFFFFFF)
+	minIndex := uint8(0)
+	for i, col := range ircColors {
+		var distance uint32
+		for index := range target {
+			distance += squaredDifference(target[index], col[index])
+		}
+		if distance < minDistance {
+			minDistance = distance
+			minIndex = uint8(i) + 2
+		}
+	}
+
+	return minIndex
+}
+
 func convertMentionsForIRC(g *discord.Guild, m *discord.MessageCreate) string {
 	message := m.Content
 
@@ -234,7 +349,7 @@ func uploadToPtpb(s string) string {
 	defer func() {
 		resp.Body.Close() // nolint: gosec, errcheck
 	}()
-	if resp.StatusCode == http.StatusOK {
+	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusConflict {
 		return resp.Header.Get("Location")
 	}
 
