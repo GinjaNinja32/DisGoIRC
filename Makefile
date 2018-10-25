@@ -1,24 +1,18 @@
 
 .PHONY: all
-all: setup deps build
+all: deps build
 
 .PHONY: deps
 deps:
-	glide up
-
-.PHONY: setup
-setup:
-	go get -u github.com/Masterminds/glide
-	go get -u github.com/alecthomas/gometalinter
-	gometalinter -i
+	go mod download
 
 .PHONY: test
 test:
-	go test -v $(shell glide novendor)
+	go test -v ./...
 
 .PHONY: lint
 lint:
-	gometalinter $(shell glide novendor)
+	gometalinter ./...
 
 .PHONY: build
 build:
@@ -27,3 +21,11 @@ build:
 .PHONY: run
 run:
 	go run disgoirc.go
+
+
+GOMETALINTER_VERSION = 2.0.11
+
+.PHONY: setup-ci
+setup-ci:
+	curl -Lo ci/gometalinter.tar.gz "https://github.com/alecthomas/gometalinter/releases/download/v${GOMETALINTER_VERSION}/gometalinter-${GOMETALINTER_VERSION}-linux-amd64.tar.gz"
+	tar zxf ci/gometalinter.tar.gz -C linter

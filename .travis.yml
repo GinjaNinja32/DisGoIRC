@@ -2,14 +2,13 @@ language: go
 sudo: false
 
 go:
-  - 1.8.7
-  - 1.9.6
-  - 1.10.2
-  - master
+- 1.11.1
+- master
 
 install:
-- make setup
+- make -C ci install
 - make deps
+- export PATH="$PATH:ci/gometalinter"
 
 script:
 - make lint
