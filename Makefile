@@ -18,7 +18,7 @@ test:
 
 .PHONY: lint
 lint:
-	gometalinter $(shell glide novendor)
+	gometalinter $(shell glide novendor) --deadline 120s
 
 .PHONY: build
 build:
