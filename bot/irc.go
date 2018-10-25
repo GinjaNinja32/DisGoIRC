@@ -47,7 +47,15 @@ func iInit() {
 
 	iSession.AddCallback("001", iSetupSession)
 
+	go iHandleErrors()
+
 	log.Infof("Connected to IRC")
+}
+
+func iHandleErrors() {
+	for err := range iSession.ErrorChan() {
+		log.Errorf("IRC error: %s", err) // TODO
+	}
 }
 
 func iSetupSession(e *irc.Event) {

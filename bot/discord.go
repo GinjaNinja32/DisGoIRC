@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 	"net/url"
 	"sort"
 	"strings"
@@ -13,6 +14,24 @@ import (
 
 	"github.com/GinjaNinja32/DisGoIRC/format"
 )
+
+const maxTries = 5
+
+func retryErrors(desc string, f func() error) {
+	attempt := 1
+	for {
+		err := f()
+		if err == nil {
+			return
+		}
+		if attempt >= maxTries {
+			log.Fatalf("Failed to %s [final attempt]: %s", desc, err)
+		}
+		log.Errorf("Failed to %s [attempt %d/%d]: %s", desc, attempt, maxTries, err)
+		time.Sleep(time.Second)
+		attempt++
+	}
+}
 
 // DiscordConfig represents the required config to connect to Discord
 type DiscordConfig struct {
@@ -30,30 +49,31 @@ var (
 )
 
 func dInit() {
-	d, err := discord.New(fmt.Sprintf("Bot %s", conf.Discord.Token))
-	dSession = d
-	if err != nil {
-		log.Fatalf("Failed to initialise Discord session: %s", err)
-	}
+	retryErrors("initialise Discord session", func() (err error) {
+		dSession, err = discord.New(fmt.Sprintf("Bot %s", conf.Discord.Token))
+		return
+	})
 
-	u, err := dSession.User("@me")
-	if err != nil {
-		log.Fatalf("Failed to get own Discord user: %s", err)
-	}
+	retryErrors("get own Discord user", func() (err error) {
+		u, err := dSession.User("@me")
+		if err == nil {
+			dBotID = u.ID
+		}
+		return
+	})
 
-	dBotID = u.ID
-
-	guilds, err := dSession.UserGuilds(99, "", "")
-	if err != nil {
-		log.Fatalf("Failed to get guilds: %s", err)
-	}
+	var guilds []*discord.UserGuild
+	retryErrors("get guilds", func() (err error) {
+		guilds, err = dSession.UserGuilds(99, "", "")
+		return
+	})
 
 	for _, g := range guilds {
 		var chans []*discord.Channel
-		chans, err = dSession.GuildChannels(g.ID)
-		if err != nil {
-			log.Fatalf("Failed to get channels for %s: %s", g.Name, err)
-		}
+		retryErrors(fmt.Sprintf("get channels for %s", g.Name), func() (err error) {
+			chans, err = dSession.GuildChannels(g.ID)
+			return
+		})
 
 		dGuilds[g.Name] = g.ID
 		dGuildChans[g.Name] = map[string]string{}
@@ -66,10 +86,7 @@ func dInit() {
 
 	dSession.AddHandler(dMessageCreate)
 
-	err = dSession.Open()
-	if err != nil {
-		log.Fatalf("Failed to connect to Discord: %s", err)
-	}
+	retryErrors("connect to Discord", dSession.Open)
 
 	go func() {
 		for f := range dMsgQueue {
@@ -292,7 +309,7 @@ func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 			continue
 		}
 		find := discordEscaper.Replace(fmt.Sprintf("#%s", c.Name))
-		replace := fmt.Sprintf("<#%s>", c.ID)
+		replace := fmt.Sprintf("<#\xff%s>", c.ID) // \xff to avoid replacing #channel with <#numbers> then #numbers matching another channel
 		message = strings.Replace(message, find, replace, -1)
 	}
 
@@ -305,7 +322,7 @@ func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 			continue
 		}
 		find := discordEscaper.Replace(fmt.Sprintf("@%s", display))
-		replace := fmt.Sprintf("<@%s>", u.User.ID)
+		replace := fmt.Sprintf("<@\xff%s>", u.User.ID) // \xff to avoid replacing @user with <@numbers> then @numbers matching another user
 		sr.Add(find, replace)
 	}
 	message = sr.Replace(message)
@@ -316,6 +333,8 @@ func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 		replace := fmt.Sprintf("<@&%s>", r.ID)
 		message = strings.Replace(message, find, replace, -1)
 	}
+
+	message = strings.Replace(message, "\xff", "", -1) // remove the \xff we added, we don't need it any more
 
 	// Emojis
 	for _, e := range g.Emojis {
