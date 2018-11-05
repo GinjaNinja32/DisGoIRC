@@ -291,10 +291,11 @@ func (s StringReplaceGroup) Less(i, j int) bool {
 	return si < sj
 }
 
-func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
+func dOutgoing(nick, channel string, messageParsed format.FormattedString, anonymous bool) {
 	chanParts := strings.Split(channel, "#")
 	guildID := dGuilds[chanParts[0]]
 	chanID := dGuildChans[chanParts[0]][chanParts[1]]
+	outgoingMessage := ""
 
 	g, err := dSession.Guild(guildID)
 	if err != nil {
@@ -344,8 +345,14 @@ func dOutgoing(nick, channel string, messageParsed format.FormattedString) {
 		message = strings.Replace(message, find, replace, -1)
 	}
 
+	if anonymous {
+		outgoingMessage = message
+	} else {
+		outgoingMessage = fmt.Sprintf("**<%s>** %s", nick, message)
+	}
+
 	dMsgQueue <- func() {
-		_, err := dSession.ChannelMessageSend(chanID, fmt.Sprintf("**<%s>** %s", nick, message))
+		_, err := dSession.ChannelMessageSend(chanID, outgoingMessage)
 		if err != nil {
 			log.Errorf("Failed to send message to %s: <%s> %s", chanID, nick, message)
 		}

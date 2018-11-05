@@ -21,6 +21,8 @@ type IRCConfig struct {
 	SSL       bool   `json:"ssl"`
 	SSLVerify bool   `json:"ssl_verify"`
 	Server    string `json:"server"`
+
+	CommandChars string `json:"command_chars"`
 }
 
 var (
@@ -73,12 +75,19 @@ func iAction(e *irc.Event) {
 
 var outgoingNickRegex = regexp.MustCompile(`\b[a-zA-Z0-9]`)
 
+// iAddAntiPing prefixes a message with a \uFEFF character to avoid pinging the user
 func iAddAntiPing(s string) string {
-	// add a \uFEFF character to avoid pinging the user
 	return outgoingNickRegex.ReplaceAllString(s, "$0\ufeff")
 }
 
-func iOutgoing(nick, channel string, message format.FormattedString) {
-	nick = iAddAntiPing(nick)
-	iSession.Privmsg(channel, fmt.Sprintf("<%s> %s", nick, message.RenderIRC()))
+// iOutgoing transmits an IRC message prefixed with the provided nick if not set to anonymous
+func iOutgoing(nick, channel string, message format.FormattedString, anonymous bool) {
+	outgoingMessage := ""
+	if anonymous {
+		outgoingMessage = message.RenderIRC()
+	} else {
+		nick = iAddAntiPing(nick)
+		outgoingMessage = fmt.Sprintf("<%s> %s", nick, message.RenderIRC())
+	}
+	iSession.Privmsg(channel, outgoingMessage)
 }

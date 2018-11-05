@@ -6,6 +6,7 @@
 		"ssl": true,
 		"ssl_verify": true,
 		"server": "irc.example.com:6697"
+		"command_chars": "?!"
 	},
 	"discord": {
 		"token": "DISCORD-TOKEN-GOES-HERE",
@@ -16,6 +17,5 @@
 		"#my-other-irc-channel": "my-discord-server-name#otherchannel",
 
 		"#other-discord": "second-discord-server#general"
-	}
-}
+	},}
 

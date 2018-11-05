@@ -16,9 +16,10 @@ type Config struct {
 }
 
 var (
-	conf            Config
-	inverseMapping  map[string]string
-	modifiedMapping map[string]string
+	conf              Config
+	inverseMapping    map[string]string
+	modifiedMapping   map[string]string
+	commandCharacters []string
 )
 
 // Init starts the bridge with the given config
@@ -26,6 +27,7 @@ func Init(c Config) {
 	conf = c
 	inverseMapping = map[string]string{}
 	modifiedMapping = map[string]string{}
+	commandCharacters = strings.Split(conf.IRC.CommandChars, "")
 	for k, v := range conf.Mapping {
 		ircChannelPassword := strings.Split(k, " ") // "#channel password" -> ["#channel", "password"]
 		ircChannel := ircChannelPassword[0]
@@ -36,6 +38,21 @@ func Init(c Config) {
 	iInit()
 }
 
+// hasCommand checks for the existence of the configured command characters at the start of a message
+func hasCommand(message string) bool {
+	hasCommand := false
+	splitMessage := strings.Fields(message)
+	for _, element := range commandCharacters {
+		//Assuming that the command character will always be the first character in the message,
+		//as well as there never being any null incoming messages.
+		if strings.Contains(splitMessage[0], strings.Split(element, "")[0]) {
+			hasCommand = true
+		}
+	}
+	return hasCommand
+}
+
+// incomingIRC is called on every message from a mapped IRC channel and posts it to the configured Discord channel
 func incomingIRC(nick, channel, message string) {
 	log.Infof("IRC %s <%s> %s", channel, nick, message)
 
@@ -48,9 +65,16 @@ func incomingIRC(nick, channel, message string) {
 
 	fs := format.ParseIRC(message)
 
-	dOutgoing(nick, discordChan, fs)
+	if hasCommand(message) {
+		dOutgoing(nick, discordChan, format.ParseIRC("Command sent by "+nick), true)
+		dOutgoing(nick, discordChan, fs, true)
+		return
+	}
+
+	dOutgoing(nick, discordChan, fs, false)
 }
 
+// incomingDiscord is called on every message from a mapped Discord channel and posts it to the configured IRC channel
 func incomingDiscord(nick, channel, message string) {
 	log.Infof("DIS %s <%s> %s", channel, nick, message)
 
@@ -63,5 +87,11 @@ func incomingDiscord(nick, channel, message string) {
 
 	fs := format.ParseDiscord(message)
 
-	iOutgoing(nick, ircChan, fs)
+	if hasCommand(message) {
+		iOutgoing(nick, ircChan, format.ParseDiscord("Command sent by "+nick), true)
+		iOutgoing(nick, ircChan, fs, true)
+		return
+	}
+
+	iOutgoing(nick, ircChan, fs, false)
 }
