@@ -45,7 +45,7 @@ func hasCommand(message string) bool {
 	for _, element := range commandCharacters {
 		//Assuming that the command character will always be the first character in the message,
 		//as well as there never being any null incoming messages.
-		if strings.Contains(splitMessage[0], strings.Split(element, "")[0]) {
+		if strings.Contains(strings.Split(splitMessage[0], "")[0], string(element)) {
 			hasCommand = true
 		}
 	}
