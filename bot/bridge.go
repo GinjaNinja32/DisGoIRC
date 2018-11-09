@@ -2,6 +2,7 @@ package bot
 
 import (
 	"strings"
+	"unicode/utf8"
 
 	log "github.com/sirupsen/logrus"
 
@@ -16,10 +17,9 @@ type Config struct {
 }
 
 var (
-	conf              Config
-	inverseMapping    map[string]string
-	modifiedMapping   map[string]string
-	commandCharacters []string
+	conf            Config
+	inverseMapping  map[string]string
+	modifiedMapping map[string]string
 )
 
 // Init starts the bridge with the given config
@@ -27,7 +27,6 @@ func Init(c Config) {
 	conf = c
 	inverseMapping = map[string]string{}
 	modifiedMapping = map[string]string{}
-	commandCharacters = strings.Split(conf.IRC.CommandChars, "")
 	for k, v := range conf.Mapping {
 		ircChannelPassword := strings.Split(k, " ") // "#channel password" -> ["#channel", "password"]
 		ircChannel := ircChannelPassword[0]
@@ -39,17 +38,9 @@ func Init(c Config) {
 }
 
 // hasCommand checks for the existence of the configured command characters at the start of a message
-func hasCommand(message string) bool {
-	hasCommand := false
-	splitMessage := strings.Fields(message)
-	for _, element := range commandCharacters {
-		//Assuming that the command character will always be the first character in the message,
-		//as well as there never being any null incoming messages.
-		if strings.Contains(strings.Split(splitMessage[0], "")[0], string(element)) {
-			hasCommand = true
-		}
-	}
-	return hasCommand
+func hasCommand(message, commandChars string) bool {
+	firstRune, _ := utf8.DecodeRuneInString(message)
+	return firstRune != 0 && strings.ContainsRune(commandChars, firstRune)
 }
 
 // incomingIRC is called on every message from a mapped IRC channel and posts it to the configured Discord channel
@@ -65,8 +56,8 @@ func incomingIRC(nick, channel, message string) {
 
 	fs := format.ParseIRC(message)
 
-	if hasCommand(message) {
-		dOutgoing(nick, discordChan, format.ParseIRC("Command sent by "+nick), true)
+	if hasCommand(message, conf.IRC.CommandChars) {
+		dOutgoing(nick, discordChan, format.FormattedString{{Text: "Command sent by " + nick}}, true)
 		dOutgoing(nick, discordChan, fs, true)
 		return
 	}
@@ -87,8 +78,8 @@ func incomingDiscord(nick, channel, message string) {
 
 	fs := format.ParseDiscord(message)
 
-	if hasCommand(message) {
-		iOutgoing(nick, ircChan, format.ParseDiscord("Command sent by "+nick), true)
+	if hasCommand(message, conf.Discord.CommandChars) {
+		iOutgoing(nick, ircChan, format.FormattedString{{Text: "Command sent by " + nick}}, true)
 		iOutgoing(nick, ircChan, fs, true)
 		return
 	}

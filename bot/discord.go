@@ -38,6 +38,7 @@ func retryErrors(desc string, f func() error) {
 type DiscordConfig struct {
 	Token        string `json:"token"`
 	UseNicknames bool   `json:"use_nicknames"`
+	CommandChars string `json:"command_chars"`
 }
 
 var (

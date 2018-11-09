@@ -10,12 +10,13 @@
 	},
 	"discord": {
 		"token": "DISCORD-TOKEN-GOES-HERE",
-		"use_nicknames": false
+		"use_nicknames": false,
+		"command_chars": "="
 	},
 	"mapping": {
 		"#my-irc-channel":       "my-discord-server-name#general",
 		"#my-other-irc-channel": "my-discord-server-name#otherchannel",
 
 		"#other-discord": "second-discord-server#general"
-	},}
-
+	}
+}
