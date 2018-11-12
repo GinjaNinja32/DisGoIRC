@@ -389,7 +389,9 @@ func (s *StringReplaceGroup) Add(find, replace string) {
 func (s *StringReplaceGroup) Replace(str string) string {
 	sort.Sort(s)
 	for _, r := range *s {
-		str = regexp.MustCompile(regexp.QuoteMeta(r.Find)+`\b`).ReplaceAllString(str, r.Replace)
+		str = regexp.
+			MustCompile(regexp.QuoteMeta(r.Find)+`($|[\pP\pZ])`).
+			ReplaceAllString(str, r.Replace+`$1`)
 	}
 	return str
 }
