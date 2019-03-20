@@ -1,10 +1,11 @@
 package bot
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/url"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -40,6 +41,10 @@ type DiscordConfig struct {
 	UseNicknames  bool   `json:"use_nicknames"`
 	ForwardEmbeds bool   `json:"forward_embeds"`
 	CommandChars  string `json:"command_chars"`
+
+	MaxLines      int    `json:"max_lines"`
+	PasteFilepath string `json:"paste_filepath"`
+	PasteURL      string `json:"paste_url"`
 }
 
 var (
@@ -161,11 +166,11 @@ func handleEmbed(e *discord.MessageEmbed, channel, authorName string) {
 	if description != "" {
 		lines := strings.Split(description, "\n")
 		lines, forceClip := clipLinesForIRC(lines)
-		if len(lines) > 3 || forceClip {
-			url := uploadToPtpb(description)
+		if len(lines) > conf.Discord.MaxLines || forceClip {
+			url := pasteData(description)
 
-			n := 2
-			if len(lines) < 2 {
+			n := conf.Discord.MaxLines - 1
+			if len(lines) < n {
 				n = len(lines)
 			}
 
@@ -293,11 +298,11 @@ func dispatchMessageToIRC(authorName, channel, message string) {
 	// Multiline
 	lines := strings.Split(message, "\n")
 	lines, forceClip := clipLinesForIRC(lines)
-	if len(lines) > 3 || forceClip {
-		url := uploadToPtpb(message)
+	if len(lines) > conf.Discord.MaxLines || forceClip {
+		url := pasteData(message)
 
-		n := 2
-		if len(lines) < 2 {
+		n := conf.Discord.MaxLines - 1
+		if len(lines) < n {
 			n = len(lines)
 		}
 
@@ -338,30 +343,16 @@ func clipLinesForIRC(s []string) ([]string, bool) {
 	return ret, anyLineForceClip
 }
 
-func uploadToPtpb(s string) string {
-	resp, err := http.PostForm("https://ptpb.pw/",
-		url.Values{"c": {s}, "p": {"1"}})
+func pasteData(s string) string {
+	h := sha256.Sum256([]byte(s))
+	b64 := base64.URLEncoding.EncodeToString(h[:])
 
+	err := ioutil.WriteFile(filepath.Join(conf.Discord.PasteFilepath, fmt.Sprintf("%s.txt", b64)), []byte(s), 0644)
 	if err != nil {
-		log.Errorf("Failed to upload to PTPB: %s", err)
-		return "Failed to upload to PTPB"
-	}
-	defer func() {
-		resp.Body.Close() // nolint: gosec, errcheck
-	}()
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusConflict {
-		return resp.Header.Get("Location")
+		return err.Error()
 	}
 
-	log.Errorf("Failed to upload to PTPB: HTTP %d", resp.StatusCode)
-	ret, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Errorf("Failed to read body: %s", err)
-	} else {
-		log.Errorf(string(ret))
-	}
-	return fmt.Sprintf("Failed to upload to PTPB: HTTP %d", resp.StatusCode)
-
+	return fmt.Sprintf("%s/%s.txt", conf.Discord.PasteURL, b64)
 }
 
 var discordEscaper = strings.NewReplacer(

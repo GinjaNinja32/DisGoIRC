@@ -13,6 +13,10 @@
 		"use_nicknames": false,
 		"forward_embeds": true,
 		"command_chars": "="
+
+		"max_lines": 0,
+		"paste_filepath": "/path/to/paste/folder/x/y/z",
+		"paste_url": "http://url.of.paste.folder/x/y/z"
 	},
 	"mapping": {
 		"#my-irc-channel":       "my-discord-server-name#general",
